@@ -20,6 +20,7 @@ import static java.lang.String.format;
 
 import com.tidb.jdbc.Discoverer;
 import com.tidb.jdbc.ExceptionHelper;
+import com.tidb.jdbc.utils.RandomUtils;
 
 import java.sql.Connection;
 import java.sql.Driver;
@@ -127,11 +128,27 @@ public class DiscovererImpl implements Discoverer {
     ExceptionHelper<String[]> result = null;
     try {
       String finalTry = bootstrapUrl[0];
-      for (String tidbUrl : backends.get()) {
+//      for (String tidbUrl : backends.get()) {
+//        if (failedBackends.containsKey(tidbUrl)) {
+//          continue;
+//        }
+//        result = discover(tidbUrl, info);
+//        if (result.isOk()) {
+//          return result.unwrap();
+//        }
+//        if (tidbUrl.equals(finalTry)) {
+//          finalTry = null;
+//        }
+//      }
+      int backendsSize = backends.get().length;
+      String[] urls = backends.get();
+      for (int i=0;i<backendsSize;i++){
+        String tidbUrl = urls[RandomUtils.randomValue(backendsSize)];
         if (failedBackends.containsKey(tidbUrl)) {
           continue;
         }
         result = discover(tidbUrl, info);
+        System.out.println("discover---:result.isOk():"+result.isOk()+",url"+tidbUrl);
         if (result.isOk()) {
           return result.unwrap();
         }
@@ -139,6 +156,7 @@ public class DiscovererImpl implements Discoverer {
           finalTry = null;
         }
       }
+
       if (finalTry != null) {
         result = discover(finalTry, info);
         if (result.isOk()) {
