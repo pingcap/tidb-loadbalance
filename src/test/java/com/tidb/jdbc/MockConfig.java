@@ -52,4 +52,19 @@ public class MockConfig {
       }
     }
   }
+
+  public static void main(String[] args) {
+    int i = 1;
+    if(i == 0){
+      System.out.println(000);
+    }else if(i == 1){
+      System.out.println(111);
+    }else if(i == 2){
+      System.out.println(222);
+    }else if(i == 3){
+      System.out.println(333);
+    }else if(i == 4){
+      System.out.println(444);
+    }
+  }
 }
