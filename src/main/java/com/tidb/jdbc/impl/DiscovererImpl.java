@@ -26,10 +26,7 @@ import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.ResultSet;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
@@ -52,6 +49,8 @@ public class DiscovererImpl implements Discoverer {
   private final AtomicReference<String[]> backends = new AtomicReference<>();
   private final ConcurrentHashMap<String, String> failedBackends = new ConcurrentHashMap<>();
   private final Executor executor;
+
+  private Map<String,Integer> weightBankend = new ConcurrentHashMap<>();
 
   public DiscovererImpl(
       final Driver driver,

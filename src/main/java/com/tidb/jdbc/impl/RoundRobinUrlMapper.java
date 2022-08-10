@@ -19,11 +19,12 @@ package com.tidb.jdbc.impl;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
-public class RoundRobinUrlMapper implements Function<String[], String[]> {
+public class RoundRobinUrlMapper implements Function<Bankend, String[]> {
 
   private final AtomicLong offset = new AtomicLong();
 
-  public String[] apply(final String[] input) {
+  public String[] apply(final Bankend bankend) {
+    String[] input = bankend.getBankend();
     int currentOffset = (int) (offset.getAndIncrement() % input.length);
     if (currentOffset == 0) {
       return input;
