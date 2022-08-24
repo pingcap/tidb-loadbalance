@@ -7,7 +7,7 @@ public class Bankend {
 
     private String[] bankend;
 
-    private Map<String,Integer> weightBankend = new HashMap<>();
+    private Map<String,Weight> weightBankend = new HashMap<>();
 
 
     public String[] getBankend() {
@@ -18,11 +18,11 @@ public class Bankend {
         this.bankend = bankend;
     }
 
-    public Map<String, Integer> getWeightBankend() {
+    public Map<String, Weight> getWeightBankend() {
         return weightBankend;
     }
 
-    public void setWeightBankend(Map<String, Integer> weightBankend) {
+    public void setWeightBankend(Map<String, Weight> weightBankend) {
         this.weightBankend = weightBankend;
     }
 }

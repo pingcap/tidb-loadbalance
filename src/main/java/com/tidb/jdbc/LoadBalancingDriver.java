@@ -23,6 +23,7 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 import com.mysql.cj.conf.ConnectionUrl;
+import com.mysql.cj.conf.HostInfo;
 import com.tidb.jdbc.impl.*;
 
 import java.nio.charset.StandardCharsets;
@@ -36,6 +37,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -93,7 +95,13 @@ public class LoadBalancingDriver implements Driver {
 
   private Properties properties;
 
-  private Map<String,Integer> weightBankend = new HashMap<>();
+  private AtomicBoolean parserState = new AtomicBoolean(false);
+
+  private String globalMysqlUrl;
+
+  private String globalTidbUrl;
+
+  private Map<String,Weight> weightBankend = new ConcurrentHashMap<>();
 
   public LoadBalancingDriver(final String wrapperUrlPrefix) {
     this(wrapperUrlPrefix, createUrlMapper(), createDriver(), DiscovererImpl::new);
@@ -179,7 +187,7 @@ public class LoadBalancingDriver implements Driver {
                             () ->
                                     Optional.ofNullable(properties.getProperty(URL_PROVIDER))
                                             .orElseGet(RoundRobinUrlMapper.class::getName));
-    if(this.urlMapper != null && globalProvider.equals(provider)){
+    if(this.urlMapper != null && globalProvider != null && globalProvider.equals(provider)){
         return null;
     }
     globalProvider = provider;
@@ -234,7 +242,11 @@ public class LoadBalancingDriver implements Driver {
       final ExceptionHelper<Connection> connection = call(() -> driver.connect(url, info));
       if (connection.isOk()) {
         discoverer.succeeded(url);
-        return connection.unwrap();
+        Connection conn = connection.unwrap();
+        if(conn.getMetaData() != null){
+          System.out.println("connect url="+conn.getMetaData().getURL());
+        }
+        return conn;
       } else {
         discoverer.failed(url);
         logger.fine(
@@ -307,13 +319,32 @@ public class LoadBalancingDriver implements Driver {
     return driver.getParentLogger();
   }
 
-  private String getMySqlUrl(final String tidbUrl) {
-    String mysqlUrl = defaultProperties(tidbUrl.replaceFirst(wrapperUrlPrefix, MYSQL_URL_PREFIX));
-    mysqlUrl = parserProperties(mysqlUrl);
-    return mysqlUrl;
+  private String getMySqlUrl(final String tidbUrl) throws SQLException{
+
+    if(!parserState.get()){
+      String mysqlUrl = defaultProperties(tidbUrl.replaceFirst(wrapperUrlPrefix, MYSQL_URL_PREFIX));
+      mysqlUrl = parserProperties(mysqlUrl);
+      this.globalMysqlUrl = mysqlUrl;
+      this.globalTidbUrl = tidbUrl;
+      parserState.set(true);
+      return mysqlUrl;
+    }else {
+      if(tidbUrl.equals(this.globalTidbUrl)){
+        return this.globalMysqlUrl;
+      }else {
+        String mysqlUrl = defaultProperties(tidbUrl.replaceFirst(wrapperUrlPrefix, MYSQL_URL_PREFIX));
+        mysqlUrl = parserProperties(mysqlUrl);
+        this.globalMysqlUrl = mysqlUrl;
+        parserState.set(true);
+        this.globalTidbUrl = tidbUrl;
+        return mysqlUrl;
+      }
+
+    }
+
   }
 
-  private String parserProperties(String tidbUrl){
+  private String parserProperties(String tidbUrl) throws SQLException {
     if(!ConnectionUrl.acceptsUrl(tidbUrl)){
       return tidbUrl;
     }
@@ -327,14 +358,21 @@ public class LoadBalancingDriver implements Driver {
       return tidbUrl;
     }
     AtomicReference<String> mysqlUrl = new AtomicReference<>("");
-
-    connStr.getHostsList().forEach(hostInfo -> {
-      String host = hostInfo.getHost();
-      String url = tidbUrl.replaceFirst(
-              MYSQL_URL_PREFIX_REGEX, format("jdbc:mysql://%s:%s", host.split(":")[0], host.split(":")[1]));
-      weightBankend.put(url,hostInfo.getPort());
-      mysqlUrl.set(url);
-    });
+    Map<String,Weight> backendMap = new ConcurrentHashMap<>();
+    for (HostInfo hostInfo : connStr.getHostsList()){
+        String host = hostInfo.getHost();
+        String url = tidbUrl.replaceFirst(
+                MYSQL_URL_PREFIX_REGEX, format("jdbc:mysql://%s:%s", host.split(":")[0], host.split(":")[1]));
+        if(backendMap.containsKey(url)){
+          throw new SQLException(host + " is repeated ");
+        }else {
+          backendMap.put(url,new Weight(url,hostInfo.getPort(),0));
+        }
+        mysqlUrl.set(url);
+    }
+    if(backendMap.size() > 0){
+      weightBankend.putAll(backendMap);
+    }
     return mysqlUrl.get();
   }
 

@@ -4,11 +4,11 @@
 
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.tidb</groupId>
-  <artifactId>tidb-jdbc</artifactId>
+  <artifactId>tidb-loadbalance</artifactId>
   <packaging>jar</packaging>
   <version>0.0.5-SNAPSHOT</version>
-  <name>TiDB JDBC Driver</name>
-  <description>tidb-jdbc Project</description>
+  <name>TiDB loadbalance</name>
+  <description>tidb-loadbalance Project</description>
 
   <url>https://github.com/pingcap-incubator/TiBigData</url>
 

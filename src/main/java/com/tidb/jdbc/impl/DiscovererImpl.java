@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class DiscovererImpl implements Discoverer {
 
   private static final String QUERY_TIDB_SERVER_SQL =
-      "SELECT `IP`,`PORT` FROM `INFORMATION_SCHEMA`.`TIDB_SERVERS_INFO` ";
+      "SELECT `IP`,`PORT` FROM `INFORMATION_SCHEMA`.`TIDB_SERVERS_INFO` ORDER BY `IP`";
   private static final String MYSQL_URL_PREFIX_REGEX = "jdbc:mysql://[^/]+:\\d+";
 
   private final String[] bootstrapUrl;
@@ -147,7 +147,6 @@ public class DiscovererImpl implements Discoverer {
           continue;
         }
         result = discover(tidbUrl, info);
-        System.out.println("discover---:result.isOk():"+result.isOk()+",url"+tidbUrl);
         if (result.isOk()) {
           return result.unwrap();
         }

@@ -40,7 +40,7 @@ public class TiDBDriverTest {
 
   public static final String TIDB_URL = "jdbc:tidb://127.0.0.1:4000?user=root&password=";
 
-  public static final String TIDB_URL_WEIGHT = "jdbc:mysql://192.168.2.146:4000:2,192.168.2.122:4000:4/wuchao_db?tidb.jdbc.url-mapper=weight&characterEncoding=utf8&useSSL=false&useServerPrepStmts=true&cachePrepStmts=true&prepStmtCacheSqlLimit=10000000&useConfigs=maxPerformance&rewriteBatchedStatements=true&defaultfetchsize=-2147483648&socketTimeout=500";
+  public static final String TIDB_URL_WEIGHT = "jdbc:mysql://127.0.0.1:4000:2,127.0.0.2:4000:4/wuchao_db?tidb.jdbc.url-mapper=weight&characterEncoding=utf8&useSSL=false&useServerPrepStmts=true&cachePrepStmts=true&prepStmtCacheSqlLimit=10000000&useConfigs=maxPerformance&rewriteBatchedStatements=true&defaultfetchsize=-2147483648&socketTimeout=500";
   public static final String MYSQL_URL = "jdbc:mysql://127.0.0.1:4000?user=root&password=";
   public static final String ORACLE_URL = "jdbc:oracle:thin:@localhost:1521:orcl";
 
@@ -107,20 +107,16 @@ public class TiDBDriverTest {
     final LoadBalancingDriver loadBalancingDriver =
         new LoadBalancingDriver(
             "jdbc:tidb://", mapper, driver, (d, b, i, e) -> new MockDiscoverer(backends1));
-    Assert.assertTrue(loadBalancingDriver.acceptsURL(TIDB_URL_WEIGHT));
     Assert.assertTrue(loadBalancingDriver.acceptsURL(MYSQL_URL));
     Assert.assertFalse(loadBalancingDriver.acceptsURL(ORACLE_URL));
     final Properties prop1 = new Properties();
     prop1.setProperty("k1", "v1");
     final Properties prop2 = (Properties) prop1.clone();
     prop2.setProperty("k2", "v2");
-    final MockConnection conn0 = (MockConnection) loadBalancingDriver.connect(TIDB_URL_WEIGHT, null);
-    Assert.assertNotNull(conn0);
     final MockConnection conn1 = (MockConnection) loadBalancingDriver.connect(TIDB_URL, prop1);
     Assert.assertNotNull(conn1);
     final MockConnection conn2 = (MockConnection) loadBalancingDriver.connect(TIDB_URL, prop2);
     Assert.assertNotNull(conn2);
-    Assert.assertNotEquals(conn0, conn1);
     Assert.assertNotEquals(conn1, conn2);
     //Assert.assertEquals(conn0.getConfig().backend, backends2[0]);
     //Assert.assertEquals(conn1.getConfig().backend, backends2[0]);
