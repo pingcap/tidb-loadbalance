@@ -6,11 +6,11 @@
   <groupId>com.tidb</groupId>
   <artifactId>tidb-loadbalance</artifactId>
   <packaging>jar</packaging>
-  <version>0.0.5-SNAPSHOT</version>
-  <name>TiDB loadbalance</name>
+  <version>0.0.5</version>
+  <name>tidb loadbalance</name>
   <description>tidb-loadbalance Project</description>
 
-  <url>https://github.com/pingcap-incubator/TiBigData</url>
+  <url>https://github.com/pingcap/tidb-loadbalance</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
