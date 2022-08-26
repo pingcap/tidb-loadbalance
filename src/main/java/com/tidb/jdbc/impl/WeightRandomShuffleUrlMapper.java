@@ -17,43 +17,57 @@
 package com.tidb.jdbc.impl;
 
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 public class WeightRandomShuffleUrlMapper implements Function<Bankend, String[]> {
 
-  private final AtomicLong offset = new AtomicLong();
+  private Map<String, Weight> filter(Bankend bankend){
+    Map<String, Weight> weightMap = new HashMap<>();
+    Map<String,Weight> weightBankend = bankend.getWeightBankend();
+    if(weightBankend == null){
+      return weightMap;
+    }
+    if(weightBankend.size() == 0){
+      return weightMap;
+    }
+    String[] backends = bankend.getBankend();
+    Map<String, String> backendsMap = new HashMap<>();
+    for (String url : backends){
+      backendsMap.put(url,url);
+    }
+    weightBankend.forEach((k,v)->{
+      if(backendsMap.containsKey(k)){
+        weightMap.put(k,v);
+      }
+    });
+    return weightMap;
+  }
 
-  /** @param input urls */
+
+  /** @param bankend urls */
   @Override
   public String[] apply(final Bankend bankend) {
-    Random random = ThreadLocalRandom.current();
-    List<String> bankendArray = new ArrayList<>();
-    Map<String,Integer> weightMap = bankend.getWeightBankend();
-    if(weightMap == null){
-      return null;
-    }
+    Map<String, Weight> weightMap = filter(bankend);
     if(weightMap.size() == 0){
       return null;
     }
-    weightMap.forEach((k,v)->{
-      if(v != 0){
-        for (int i = 0;i< v;i++){
-          bankendArray.add(k);
-        }
+    int sumWeight = 0;
+    Weight maxCurrentWeight = null;
+    for (Weight weight : weightMap.values()){
+      sumWeight += weight.getWeight();
+      weight.setCurrentWeight(weight.getCurrentWeight() + weight.getWeight());
+      if(maxCurrentWeight == null || maxCurrentWeight.getCurrentWeight() < weight.getCurrentWeight()){
+        maxCurrentWeight = weight;
       }
-    });
-    String[] input = bankendArray.toArray(new String[bankendArray.size()]);
-    int currentOffset = (int)(this.offset.getAndIncrement() % (long)input.length);
-    if (currentOffset == 0) {
-      return input;
-    } else {
-      String[] result = new String[input.length];
-      int right = input.length - currentOffset;
-      System.arraycopy(input, currentOffset, result, 0, right);
-      System.arraycopy(input, 0, result, right, currentOffset);
-      return result;
     }
+    List<Map.Entry<String,Weight>> list = new ArrayList<>(weightMap.entrySet());
+    //升序排序
+    list.sort((o1, o2) -> o2.getValue().getCurrentWeight().compareTo(o1.getValue().getCurrentWeight()));
+    String[] result = new String[list.size()];
+    for(int i=0;i<list.size();i++){
+      result[i] = list.get(i).getKey();
+    }
+    maxCurrentWeight.setCurrentWeight(maxCurrentWeight.getCurrentWeight() - sumWeight);
+    return result;
   }
 }

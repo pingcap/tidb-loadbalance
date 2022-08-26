@@ -4,13 +4,13 @@
 
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.tidb</groupId>
-  <artifactId>tidb-jdbc</artifactId>
+  <artifactId>tidb-loadbalance</artifactId>
   <packaging>jar</packaging>
-  <version>0.0.5-SNAPSHOT</version>
-  <name>TiDB JDBC Driver</name>
-  <description>tidb-jdbc Project</description>
+  <version>0.0.5</version>
+  <name>tidb loadbalance</name>
+  <description>tidb-loadbalance Project</description>
 
-  <url>https://github.com/pingcap-incubator/TiBigData</url>
+  <url>https://github.com/pingcap/tidb-loadbalance</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
