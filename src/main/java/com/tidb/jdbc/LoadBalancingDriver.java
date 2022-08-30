@@ -242,11 +242,7 @@ public class LoadBalancingDriver implements Driver {
       final ExceptionHelper<Connection> connection = call(() -> driver.connect(url, info));
       if (connection.isOk()) {
         discoverer.succeeded(url);
-        Connection conn = connection.unwrap();
-        if(conn.getMetaData() != null){
-          System.out.println("connect url="+conn.getMetaData().getURL());
-        }
-        return conn;
+        return connection.unwrap();
       } else {
         discoverer.failed(url);
         logger.fine(
@@ -361,6 +357,16 @@ public class LoadBalancingDriver implements Driver {
     Map<String,Weight> backendMap = new ConcurrentHashMap<>();
     for (HostInfo hostInfo : connStr.getHostsList()){
         String host = hostInfo.getHost();
+        if(host != null) {
+          continue;
+        }
+        if("".equals(host)){
+          continue;
+        }
+        String[] hostArray = host.split(":");
+        if(hostArray.length != 2){
+          throw new SQLException("weight url config error, example : jdbc:tidb://{ip1}:{port1}:{weight1},{ip2}:{port2}:{weight2},{ip3}:{port3}:{weight3}/db?tidb.jdbc.url-mapper=weight");
+        }
         String url = tidbUrl.replaceFirst(
                 MYSQL_URL_PREFIX_REGEX, format("jdbc:mysql://%s:%s", host.split(":")[0], host.split(":")[1]));
         if(backendMap.containsKey(url)){
