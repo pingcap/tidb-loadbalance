@@ -18,26 +18,26 @@ package com.tidb.jdbc;
 
 import java.util.function.Function;
 
-import com.tidb.jdbc.impl.Bankend;
+import com.tidb.jdbc.impl.Backend;
 import org.junit.Assert;
 
-public class MockUrlMapper implements Function<Bankend, String[]> {
+public class MockUrlMapper implements Function<Backend, String[]> {
 
-  public Bankend result;
+  public Backend result;
   private String[] expected;
 
-  MockUrlMapper(Bankend result, String[] expected) {
+  MockUrlMapper(Backend result, String[] expected) {
     this.result = result;
     this.expected = expected;
   }
 
-  void setResult(Bankend result) {
+  void setResult(Backend result) {
     this.result = result;
   }
 
   @Override
-  public String[] apply(Bankend args) {
-    Assert.assertArrayEquals(args.getBankend(), expected);
+  public String[] apply(Backend args) {
+    Assert.assertArrayEquals(args.getBackend(), expected);
     return expected;
   }
 }

@@ -20,7 +20,9 @@ import static java.lang.String.format;
 
 import com.tidb.jdbc.Discoverer;
 import com.tidb.jdbc.ExceptionHelper;
+import com.tidb.jdbc.conf.ConnUrlParser;
 import com.tidb.jdbc.utils.RandomUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.sql.Connection;
 import java.sql.Driver;
@@ -40,6 +42,10 @@ public class DiscovererImpl implements Discoverer {
   private static final String QUERY_TIDB_SERVER_SQL =
       "SELECT `IP`,`PORT` FROM `INFORMATION_SCHEMA`.`TIDB_SERVERS_INFO` ORDER BY `IP`";
   private static final String MYSQL_URL_PREFIX_REGEX = "jdbc:mysql://[^/]+:\\d+";
+
+  private static final String TIDB_URL_MAPPER = "tidb.jdbc.url-mapper";
+
+  private static final String TIDB_DISCOVERY = "tidb.discovery";
 
   private final String[] bootstrapUrl;
   private final Properties info;
@@ -80,8 +86,7 @@ public class DiscovererImpl implements Discoverer {
   }
 
   @Override
-  public String[] getAndReload() {
-    final Future<String[]> future = reload();
+  public String[] getAndReload() {final Future<String[]> future = reload();
     if (future.isDone()) {
       return ExceptionHelper.uncheckedCall(future::get);
     }
@@ -146,6 +151,7 @@ public class DiscovererImpl implements Discoverer {
         if (failedBackends.containsKey(tidbUrl)) {
           continue;
         }
+        System.out.println("tidbUrl:"+tidbUrl);
         result = discover(tidbUrl, info);
         if (result.isOk()) {
           return result.unwrap();
@@ -156,6 +162,7 @@ public class DiscovererImpl implements Discoverer {
       }
 
       if (finalTry != null) {
+        System.out.println("tidbUrl:"+finalTry);
         result = discover(finalTry, info);
         if (result.isOk()) {
           return result.unwrap();
@@ -165,6 +172,7 @@ public class DiscovererImpl implements Discoverer {
       throw new RuntimeException("No available endpoint to discover backends", result.unwrapErr());
     } finally {
       if (result != null && result.isOk()) {
+
         backends.set(result.unwrap());
         failedBackends.clear();
       }
@@ -176,6 +184,15 @@ public class DiscovererImpl implements Discoverer {
   private ExceptionHelper<String[]> discover(final String tidbUrl, final Properties info) {
     return ExceptionHelper.call(
         () -> {
+          ConnUrlParser connStrParser = ConnUrlParser.parseConnectionString(tidbUrl);
+          Properties properties = connStrParser.getConnectionArgumentsAsProperties();
+          if(properties != null){
+            String provider = properties.getProperty(TIDB_URL_MAPPER);
+            String isDiscoverer = properties.getProperty(TIDB_DISCOVERY);
+            if(StringUtils.isNotBlank(provider) && "weight".equals(provider) && StringUtils.isNotBlank(isDiscoverer) && "false".equals(isDiscoverer)){
+              return new String[0];
+            }
+          }
           try (final Connection connection = driver.connect(tidbUrl, info);
               final Statement statement = connection.createStatement();
               final ResultSet resultSet = statement.executeQuery(QUERY_TIDB_SERVER_SQL)) {
@@ -189,6 +206,7 @@ public class DiscovererImpl implements Discoverer {
             }
             return list.toArray(new String[0]);
           }
+
         });
   }
 }

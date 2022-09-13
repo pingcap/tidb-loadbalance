@@ -19,24 +19,30 @@ package com.tidb.jdbc.impl;
 import java.util.*;
 import java.util.function.Function;
 
-public class WeightRandomShuffleUrlMapper implements Function<Bankend, String[]> {
+public class WeightRandomShuffleUrlMapper implements Function<Backend, String[]> {
 
-  private Map<String, Weight> filter(Bankend bankend){
+  private Map<String, Weight> filter(Backend backend){
     Map<String, Weight> weightMap = new HashMap<>();
-    Map<String,Weight> weightBankend = bankend.getWeightBankend();
+    Map<String,Weight> weightBankend = backend.getWeightBackend();
     if(weightBankend == null){
       return weightMap;
     }
     if(weightBankend.size() == 0){
       return weightMap;
     }
-    String[] backends = bankend.getBankend();
+    String[] backends = backend.getBackend();
     Map<String, String> backendsMap = new HashMap<>();
-    for (String url : backends){
-      backendsMap.put(url,url);
+    if(backends != null){
+      for (String url : backends){
+        backendsMap.put(url,url);
+      }
     }
     weightBankend.forEach((k,v)->{
-      if(backendsMap.containsKey(k)){
+      if(backendsMap.size() > 0){
+        if(backendsMap.containsKey(k)){
+          weightMap.put(k,v);
+        }
+      }else {
         weightMap.put(k,v);
       }
     });
@@ -46,7 +52,7 @@ public class WeightRandomShuffleUrlMapper implements Function<Bankend, String[]>
 
   /** @param bankend urls */
   @Override
-  public String[] apply(final Bankend bankend) {
+  public String[] apply(final Backend bankend) {
     Map<String, Weight> weightMap = filter(bankend);
     if(weightMap.size() == 0){
       return null;

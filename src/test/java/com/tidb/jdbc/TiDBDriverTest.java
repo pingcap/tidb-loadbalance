@@ -82,10 +82,10 @@ public class TiDBDriverTest {
       };
 
 
-  public static final Bankend bankend = new Bankend();
+  public static final Backend backend = new Backend();
 
   static {
-    bankend.setBankend(backends2);
+    backend.setBackend(backends2);
   }
 
 
@@ -100,9 +100,9 @@ public class TiDBDriverTest {
   @Test
   public void testLoadBalancingDriver() throws SQLException {
     final MockDriver driver = new MockDriver();
-    final Bankend bankend = new Bankend();
-    bankend.setBankend(backends2);
-    final MockUrlMapper mapper = new MockUrlMapper(bankend, backends1);
+    final Backend backend = new Backend();
+    backend.setBackend(backends2);
+    final MockUrlMapper mapper = new MockUrlMapper(backend, backends1);
 
     final LoadBalancingDriver loadBalancingDriver =
         new LoadBalancingDriver(
@@ -121,7 +121,7 @@ public class TiDBDriverTest {
     //Assert.assertEquals(conn0.getConfig().backend, backends2[0]);
     //Assert.assertEquals(conn1.getConfig().backend, backends2[0]);
     //Assert.assertEquals(conn2.getConfig().backend, backends2[0]);
-    mapper.setResult(bankend);
+    mapper.setResult(backend);
 //    Assert.assertEquals(
 //        ((MockConnection) ((MockConnection) loadBalancingDriver.connect(TIDB_URL, prop2)))
 //            .getConfig()
@@ -133,13 +133,13 @@ public class TiDBDriverTest {
   public void testRandomShuffleUrlMapper() {
     final RandomShuffleUrlMapper mapper = new RandomShuffleUrlMapper();
     final Set<String> allBackends = Arrays.stream(backends1).collect(Collectors.toSet());
-    bankend.setBankend(backends1);
-    for (final String backend : mapper.apply(bankend)) {
+    backend.setBackend(backends1);
+    for (final String backend : mapper.apply(backend)) {
       Assert.assertTrue(allBackends.contains(backend));
       allBackends.remove(backend);
     }
     Assert.assertTrue(allBackends.isEmpty());
-    while (Arrays.equals(backends1, mapper.apply(bankend))) {}
+    while (Arrays.equals(backends1, mapper.apply(backend))) {}
   }
 
   @Test
@@ -161,9 +161,9 @@ public class TiDBDriverTest {
   @Test
   public void testRoundRobinUrlMapper() {
     final RoundRobinUrlMapper mapper = new RoundRobinUrlMapper();
-    bankend.setBankend(backends1);
+    backend.setBackend(backends1);
     for (int idx = 0; idx < 10; idx++) {
-      Assert.assertArrayEquals(backends1, mapper.apply(bankend));
+      Assert.assertArrayEquals(backends1, mapper.apply(backend));
       Assert.assertArrayEquals(
           new String[] {
             "jdbc:mysql://127.0.0.1:4001?user=root&password=",
@@ -176,7 +176,7 @@ public class TiDBDriverTest {
             "jdbc:mysql://127.0.0.1:4008?user=root&password=",
             "jdbc:mysql://127.0.0.1:4000?user=root&password=",
           },
-          mapper.apply(bankend));
+          mapper.apply(backend));
       Assert.assertArrayEquals(
           new String[] {
             "jdbc:mysql://127.0.0.1:4002?user=root&password=",
@@ -189,7 +189,7 @@ public class TiDBDriverTest {
             "jdbc:mysql://127.0.0.1:4000?user=root&password=",
             "jdbc:mysql://127.0.0.1:4001?user=root&password=",
           },
-          mapper.apply(bankend));
+          mapper.apply(backend));
       Assert.assertArrayEquals(
           new String[] {
             "jdbc:mysql://127.0.0.1:4003?user=root&password=",
@@ -202,7 +202,7 @@ public class TiDBDriverTest {
             "jdbc:mysql://127.0.0.1:4001?user=root&password=",
             "jdbc:mysql://127.0.0.1:4002?user=root&password=",
           },
-          mapper.apply(bankend));
+          mapper.apply(backend));
       Assert.assertArrayEquals(
           new String[] {
             "jdbc:mysql://127.0.0.1:4004?user=root&password=",
@@ -215,7 +215,7 @@ public class TiDBDriverTest {
             "jdbc:mysql://127.0.0.1:4002?user=root&password=",
             "jdbc:mysql://127.0.0.1:4003?user=root&password=",
           },
-          mapper.apply(bankend));
+          mapper.apply(backend));
       Assert.assertArrayEquals(
           new String[] {
             "jdbc:mysql://127.0.0.1:4005?user=root&password=",
@@ -228,7 +228,7 @@ public class TiDBDriverTest {
             "jdbc:mysql://127.0.0.1:4003?user=root&password=",
             "jdbc:mysql://127.0.0.1:4004?user=root&password=",
           },
-          mapper.apply(bankend));
+          mapper.apply(backend));
       Assert.assertArrayEquals(
           new String[] {
             "jdbc:mysql://127.0.0.1:4006?user=root&password=",
@@ -241,7 +241,7 @@ public class TiDBDriverTest {
             "jdbc:mysql://127.0.0.1:4004?user=root&password=",
             "jdbc:mysql://127.0.0.1:4005?user=root&password=",
           },
-          mapper.apply(bankend));
+          mapper.apply(backend));
       Assert.assertArrayEquals(
           new String[] {
             "jdbc:mysql://127.0.0.1:4007?user=root&password=",
@@ -254,7 +254,7 @@ public class TiDBDriverTest {
             "jdbc:mysql://127.0.0.1:4005?user=root&password=",
             "jdbc:mysql://127.0.0.1:4006?user=root&password=",
           },
-          mapper.apply(bankend));
+          mapper.apply(backend));
       Assert.assertArrayEquals(
           new String[] {
             "jdbc:mysql://127.0.0.1:4008?user=root&password=",
@@ -267,7 +267,7 @@ public class TiDBDriverTest {
             "jdbc:mysql://127.0.0.1:4006?user=root&password=",
             "jdbc:mysql://127.0.0.1:4007?user=root&password=",
           },
-          mapper.apply(bankend));
+          mapper.apply(backend));
     }
   }
 
