@@ -22,7 +22,6 @@ import com.tidb.jdbc.Discoverer;
 import com.tidb.jdbc.ExceptionHelper;
 import com.tidb.jdbc.conf.ConnUrlParser;
 import com.tidb.jdbc.utils.RandomUtils;
-import org.apache.commons.lang3.StringUtils;
 
 import java.sql.Connection;
 import java.sql.Driver;
@@ -189,7 +188,7 @@ public class DiscovererImpl implements Discoverer {
           if(properties != null){
             String provider = properties.getProperty(TIDB_URL_MAPPER);
             String isDiscoverer = properties.getProperty(TIDB_DISCOVERY);
-            if(StringUtils.isNotBlank(provider) && "weight".equals(provider) && StringUtils.isNotBlank(isDiscoverer) && "false".equals(isDiscoverer)){
+            if(provider != null && "weight".equals(provider) && isDiscoverer != null && "false".equals(isDiscoverer)){
               return new String[0];
             }
           }
