@@ -13,3 +13,16 @@ limitations under the License.#
 https://www.apache.org/licenses/LICENSE-2.0.txt
 
 tidb-jdbc
+
+CHANGE LOG:
+-----------
+Version 0.0.6
+--------------------------------------
++ support JDBC 5.x
++ weight mapper config tidb.discovery=false
+
+Version 0.0.5
+--------------------------------------
++ add weight mapper
++ tidb config default Properties
++ discover random get tidbUrl
