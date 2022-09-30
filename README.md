@@ -12,7 +12,7 @@ limitations under the License.#
 
 https://www.apache.org/licenses/LICENSE-2.0.txt
 
-tidb-jdbc
+tidb-loadbalance
 
 CHANGE LOG:
 -----------

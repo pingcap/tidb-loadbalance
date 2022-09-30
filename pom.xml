@@ -6,7 +6,7 @@
   <groupId>io.github.lastincisor</groupId>
   <artifactId>tidb-loadbalance</artifactId>
   <packaging>jar</packaging>
-  <version>0.0.5</version>
+  <version>0.0.6</version>
   <name>tidb loadbalance</name>
   <description>tidb-loadbalance Project</description>
 
