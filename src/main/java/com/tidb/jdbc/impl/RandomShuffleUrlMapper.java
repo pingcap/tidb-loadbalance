@@ -21,11 +21,11 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 
-public class RandomShuffleUrlMapper implements Function<Bankend, String[]> {
-  /** @param bankend urls */
+public class RandomShuffleUrlMapper implements Function<Backend, String[]> {
+  /** @param backend urls */
   @Override
-  public String[] apply(final Bankend bankend) {
-    String[] input = bankend.getBankend();
+  public String[] apply(final Backend backend) {
+    String[] input = backend.getBackend();
     Random random = ThreadLocalRandom.current();
     int size = input.length;
     String[] shuffled = Arrays.copyOf(input, size);

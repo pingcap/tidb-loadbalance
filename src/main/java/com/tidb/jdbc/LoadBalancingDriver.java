@@ -22,8 +22,8 @@ import static com.tidb.jdbc.ExceptionHelper.uncheckedCall;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
-import com.mysql.cj.conf.ConnectionUrl;
-import com.mysql.cj.conf.HostInfo;
+import com.tidb.jdbc.conf.ConnUrlParser;
+import com.tidb.jdbc.conf.HostInfo;
 import com.tidb.jdbc.impl.*;
 
 import java.nio.charset.StandardCharsets;
@@ -49,6 +49,9 @@ public class LoadBalancingDriver implements Driver {
   private static final String MYSQL_URL_PREFIX = "jdbc:mysql://";
   /** The value is set by {@link System#setProperty(String, String)} */
   private static final String TIDB_URL_MAPPER = "tidb.jdbc.url-mapper";
+
+  private static final String TIDB_DISCOVERY = "tidb.discovery";
+
   /** The value is set by {@link System#setProperty(String, String)} */
   private static final String URL_PROVIDER = "url.provider";
   /** The value is set by {@link System#setProperty(String, String)} */
@@ -89,7 +92,7 @@ public class LoadBalancingDriver implements Driver {
   private final ConcurrentHashMap<String, Discoverer> discoverers = new ConcurrentHashMap<>();
   private final ScheduledThreadPoolExecutor executor;
   /** implements {@link java.util.function.Function}, Default: {@link RandomShuffleUrlMapper} */
-  private Function<Bankend, String[]> urlMapper;
+  private Function<Backend, String[]> urlMapper;
 
   private final DiscovererFactory discovererFactory;
 
@@ -101,7 +104,7 @@ public class LoadBalancingDriver implements Driver {
 
   private String globalTidbUrl;
 
-  private Map<String,Weight> weightBankend = new ConcurrentHashMap<>();
+  private Map<String,Weight> weightBackend = new ConcurrentHashMap<>();
 
   public LoadBalancingDriver(final String wrapperUrlPrefix) {
     this(wrapperUrlPrefix, createUrlMapper(), createDriver(), DiscovererImpl::new);
@@ -109,7 +112,7 @@ public class LoadBalancingDriver implements Driver {
 
   LoadBalancingDriver(
       final String wrapperUrlPrefix,
-      final Function<Bankend, String[]> mapper,
+      final Function<Backend, String[]> mapper,
       final Driver driver,
       final DiscovererFactory discovererFactory) {
     this.wrapperUrlPrefix = requireNonNull(wrapperUrlPrefix, "wrapperUrlPrefix can not be null");
@@ -153,7 +156,7 @@ public class LoadBalancingDriver implements Driver {
   }
 
   @SuppressWarnings("unchecked")
-  static Function<Bankend, String[]> createUrlMapper(String type) {
+  static Function<Backend, String[]> createUrlMapper(String type) {
     if (type.equalsIgnoreCase("roundrobin")) {
       type = RoundRobinUrlMapper.class.getName();
     } else if (type.equalsIgnoreCase("random")) {
@@ -165,11 +168,11 @@ public class LoadBalancingDriver implements Driver {
     final String finalType = type;
     return uncheckedCall(
         () ->
-            (Function<Bankend, String[]>)
+            (Function<Backend, String[]>)
                 Class.forName(finalType).getDeclaredConstructor().newInstance());
   }
 
-  private static Function<Bankend, String[]> createUrlMapper() {
+  private static Function<Backend, String[]> createUrlMapper() {
     final String provider =
         Optional.ofNullable(System.getProperty(TIDB_URL_MAPPER))
             .orElseGet(
@@ -180,7 +183,7 @@ public class LoadBalancingDriver implements Driver {
     return createUrlMapper(provider);
   }
 
-  private Function<Bankend, String[]> createUrlsMapper() {
+  private Function<Backend, String[]> createUrlsMapper() {
     final String provider =
             Optional.ofNullable(properties.getProperty(TIDB_URL_MAPPER))
                     .orElseGet(
@@ -191,6 +194,7 @@ public class LoadBalancingDriver implements Driver {
         return null;
     }
     globalProvider = provider;
+
     return createUrlMapper(provider);
   }
 
@@ -232,21 +236,19 @@ public class LoadBalancingDriver implements Driver {
     } else {
       backends = discoverer.get();
     }
-    Bankend bankend = new Bankend();
-    bankend.setBankend(backends);
-    if(weightBankend.size() > 0){
-      bankend.setWeightBankend(weightBankend);
+    Backend backend = new Backend();
+    if(backends != null){
+      backend.setBackend(backends);
     }
-    for (final String url : urlMapper.apply(bankend)) {
+    if(weightBackend.size() > 0){
+      backend.setWeightBackend(weightBackend);
+    }
+    for (final String url : urlMapper.apply(backend)) {
       logger.fine(() -> "Try connecting to " + url);
       final ExceptionHelper<Connection> connection = call(() -> driver.connect(url, info));
       if (connection.isOk()) {
         discoverer.succeeded(url);
-        Connection conn = connection.unwrap();
-        if(conn.getMetaData() != null){
-          System.out.println("connect url="+conn.getMetaData().getURL());
-        }
-        return conn;
+        return connection.unwrap();
       } else {
         discoverer.failed(url);
         logger.fine(
@@ -261,7 +263,7 @@ public class LoadBalancingDriver implements Driver {
   @Override
   public Connection connect(final String tidbUrl, final Properties info) throws SQLException {
     String mysqlUrl = getMySqlUrl(tidbUrl);
-    Function<Bankend, String[]> mapper = createUrlsMapper();
+    Function<Backend, String[]> mapper = createUrlsMapper();
     if(mapper != null){
       this.urlMapper = mapper;
     }
@@ -329,7 +331,7 @@ public class LoadBalancingDriver implements Driver {
       parserState.set(true);
       return mysqlUrl;
     }else {
-      if(tidbUrl.equals(this.globalTidbUrl)){
+      if(tidbUrl.equals(this.globalTidbUrl) && this.globalMysqlUrl != null && !"".equals(this.globalMysqlUrl)){
         return this.globalMysqlUrl;
       }else {
         String mysqlUrl = defaultProperties(tidbUrl.replaceFirst(wrapperUrlPrefix, MYSQL_URL_PREFIX));
@@ -345,12 +347,11 @@ public class LoadBalancingDriver implements Driver {
   }
 
   private String parserProperties(String tidbUrl) throws SQLException {
-    if(!ConnectionUrl.acceptsUrl(tidbUrl)){
+    if(!ConnUrlParser.isConnectionStringSupported(tidbUrl)){
       return tidbUrl;
     }
-    Properties info = new Properties();
-    ConnectionUrl connStr = ConnectionUrl.getConnectionUrlInstance(tidbUrl, info);
-    this.properties = connStr.getConnectionArgumentsAsProperties();
+    ConnUrlParser connStrParser = ConnUrlParser.parseConnectionString(tidbUrl);
+    this.properties = connStrParser.getConnectionArgumentsAsProperties();
     if(properties.getProperty(TIDB_URL_MAPPER) == null){
       return tidbUrl;
     }
@@ -359,8 +360,18 @@ public class LoadBalancingDriver implements Driver {
     }
     AtomicReference<String> mysqlUrl = new AtomicReference<>("");
     Map<String,Weight> backendMap = new ConcurrentHashMap<>();
-    for (HostInfo hostInfo : connStr.getHostsList()){
+    for (HostInfo hostInfo : connStrParser.getHosts()){
         String host = hostInfo.getHost();
+        if(host == null) {
+          continue;
+        }
+        if("".equals(host)){
+          continue;
+        }
+        String[] hostArray = host.split(":");
+        if(hostArray.length != 2){
+          throw new SQLException("weight url config error, example : jdbc:tidb://{ip1}:{port1}:{weight1},{ip2}:{port2}:{weight2},{ip3}:{port3}:{weight3}/db?tidb.jdbc.url-mapper=weight");
+        }
         String url = tidbUrl.replaceFirst(
                 MYSQL_URL_PREFIX_REGEX, format("jdbc:mysql://%s:%s", host.split(":")[0], host.split(":")[1]));
         if(backendMap.containsKey(url)){
@@ -371,7 +382,7 @@ public class LoadBalancingDriver implements Driver {
         mysqlUrl.set(url);
     }
     if(backendMap.size() > 0){
-      weightBankend.putAll(backendMap);
+      weightBackend.putAll(backendMap);
     }
     return mysqlUrl.get();
   }
