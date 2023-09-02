@@ -262,6 +262,10 @@ public class LoadBalancingDriver implements Driver {
 
   @Override
   public Connection connect(final String tidbUrl, final Properties info) throws SQLException {
+    // The driver should return "null" if it realizes it is the wrong kind of driver to connect to the given URL.
+    if (!acceptsURL(tidbUrl)) {
+      return null;
+    }
     String mysqlUrl = getMySqlUrl(tidbUrl);
     Function<Backend, String[]> mapper = createUrlsMapper();
     if(mapper != null){
