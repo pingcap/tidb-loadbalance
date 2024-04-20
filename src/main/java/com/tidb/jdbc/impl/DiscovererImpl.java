@@ -35,10 +35,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.logging.Logger;
 
 public class DiscovererImpl implements Discoverer {
-  private static final Logger logger = Logger.getLogger(DiscovererImpl.class.getName());
 
   private static final String QUERY_TIDB_SERVER_SQL =
       "SELECT `IP`,`PORT` FROM `INFORMATION_SCHEMA`.`TIDB_SERVERS_INFO` ORDER BY `IP`";
@@ -152,7 +150,6 @@ public class DiscovererImpl implements Discoverer {
         if (failedBackends.containsKey(tidbUrl)) {
           continue;
         }
-        logger.fine("tidbUrl:" + tidbUrl);
         result = discover(tidbUrl, info);
         if (result.isOk()) {
           return result.unwrap();
@@ -163,7 +160,6 @@ public class DiscovererImpl implements Discoverer {
       }
 
       if (finalTry != null) {
-        logger.fine("tidbUrl:" + finalTry);
         result = discover(finalTry, info);
         if (result.isOk()) {
           return result.unwrap();
