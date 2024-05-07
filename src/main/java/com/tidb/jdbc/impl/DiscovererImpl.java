@@ -150,7 +150,6 @@ public class DiscovererImpl implements Discoverer {
         if (failedBackends.containsKey(tidbUrl)) {
           continue;
         }
-        System.out.println("tidbUrl:"+tidbUrl);
         result = discover(tidbUrl, info);
         if (result.isOk()) {
           return result.unwrap();
@@ -161,7 +160,6 @@ public class DiscovererImpl implements Discoverer {
       }
 
       if (finalTry != null) {
-        System.out.println("tidbUrl:"+finalTry);
         result = discover(finalTry, info);
         if (result.isOk()) {
           return result.unwrap();

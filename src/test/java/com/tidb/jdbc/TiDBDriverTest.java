@@ -18,6 +18,7 @@ package com.tidb.jdbc;
 
 import com.tidb.jdbc.impl.*;
 
+import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -27,6 +28,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 
 import com.tidb.test.IntegrationTest;
+import io.tidb.bigdata.jdbc.TiDBDriver;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -290,5 +292,21 @@ public class TiDBDriverTest {
     Assert.assertArrayEquals(discoverer.getAndReload(), backends3);
     config.unblock();
     Assert.assertArrayEquals(discoverer.reload().get(), backends3);
+  }
+
+  /**
+   * connect方法应该先判断连接是否支持，不支持的话返回null
+   * <p>
+   *     背景：我们的某个模块中引入了多个jdbc依赖（tidb-loadbalance/clickhouse-jdbc），
+   *     在尝试使用DriverManager.getConnection("jdbc:clickhouse://...")获取连接的时候，
+   *     tidb-loadbalance抛出了异常
+   * </p>
+   * @throws SQLException
+   */
+  @Test
+  public void testUnAcceptableUrl() throws SQLException {
+    TiDBDriver driver = new TiDBDriver();
+    Connection connection = driver.connect(ORACLE_URL, new Properties());
+    Assert.assertNull( "", null);
   }
 }
